@@ -90,6 +90,12 @@ class EXA {
         this.pc++;
     }
 
+    runUntil(lineNum) {
+        while (this.pc <= lineNum - 1) {
+            this.runStep();
+        }
+    }
+
     run() {
         while (!this.halted) {
             if (!this.blocked) {

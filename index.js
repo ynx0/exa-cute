@@ -21,7 +21,7 @@ MULI X 12 X
 let program = parser.getProgramAST(program2);
 
 let XA = new EXA(program);
-XA.run();
+XA.runUntil(3);
 
 
 console.log(XA);
