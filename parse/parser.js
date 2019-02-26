@@ -45,7 +45,6 @@ let registerMap = {
 };
 
 
-
 class Parser {
 
     constructor() {
