@@ -1,3 +1,4 @@
+const util = require('util');
 const AST = require('./parse/type/types.js');
 
 
@@ -11,6 +12,7 @@ function makeEnum(array) {
 
 class EXA {
     constructor(program) {
+        this.id = 0; // TODO make id (autoincremented thing?)
         this.pc = 0; // program counter. the line number of current executing program
         this.cycleCount = 0; // todo implement and take into account pseudoinstructions (mark)
         this.program = program;
@@ -50,10 +52,11 @@ class EXA {
 
     coreDump() {
         console.error(`
-        EXA@${this.pc}
+        EXA#${this.id}
+        PC: ${this.pc}
         HALTED: ${this.halted}
         BLOCKED: ${this.blocked}
-        LABELS: ${this.labelMap}
+        LABELS: ${util.inspect(this.labelMap)}
         REGISTERS: [
             X: ${this.X.toString()}
             T: ${this.T}
@@ -86,6 +89,7 @@ class EXA {
 
     processInstruction(instr) {
         let Instructions = this.Instuctions;
+        console.log(instr);
         let args = instr.args;
 
 
@@ -100,7 +104,7 @@ class EXA {
             case Instructions.NOOP:
                 break;
             case Instructions.COPY:
-                (_ => {
+                (() => {
                     let newValue = this.getValueFromParam(args[0]);
                     let dest = this.getRegisterFromParam(args[1]);
                     dest.setValue(newValue);
@@ -117,7 +121,7 @@ class EXA {
             case Instructions.SUBI:
             case Instructions.MULI:
             case Instructions.DIVI:
-                (_ => {
+                (() => {
                     let a = this.getValueFromParam(args[0]);
                     let b = this.getValueFromParam(args[1]);
                     let dest = this.getRegisterFromParam(args[2]);
@@ -142,7 +146,7 @@ class EXA {
     runStep() {
         // this.validateState();
         // console.log(`pc: ${this.pc}, prl: ${this.program.body.length}`);
-        if (this.pc > this.program.body.length) {
+        if (this.pc >= this.program.body.length) {
             this.halted = true;
             return;
         }
