@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/ynx0/exa-cute#readme",
   "dependencies": {
+    "autosize": "^4.0.2",
     "ohm-js": "^0.14.0"
   }
 }

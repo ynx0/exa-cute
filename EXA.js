@@ -51,7 +51,7 @@ class EXA {
     }
 
     coreDump() {
-        console.error(`
+        console.log(`
         EXA#${this.id}
         PC: ${this.pc}
         HALTED: ${this.halted}
