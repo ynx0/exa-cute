@@ -10,6 +10,11 @@ function makeEnum(array) {
     return Object.freeze(theEnum);
 }
 
+const CommMode = makeEnum([
+    "LOCAL",
+    "GLOBAL",
+]);
+
 class EXA {
     constructor(program) {
         this.id = 0; // TODO make id (autoincremented thing?)
@@ -18,6 +23,7 @@ class EXA {
         this.program = program;
         this.halted = false;
         this.blocked = false;
+        this.mode = CommMode.GLOBAL;
         this.labelMap = {};
         this.X = new EXARegister();
         this.T = new EXARegister();
@@ -34,7 +40,10 @@ class EXA {
             "DIVI",
             "JUMP",
             "TJMP",
-            "FJMP"
+            "FJMP",
+            "TEST",
+            "HALT",
+            "MODE"
         ]);
         this.setupLabels();
         this.setupCoreDump();
@@ -54,11 +63,12 @@ class EXA {
         console.error(`
         EXA#${this.id}
         PC: ${this.pc}
+        CYCLE: ${this.cycleCount}
         HALTED: ${this.halted}
         BLOCKED: ${this.blocked}
         LABELS: ${util.inspect(this.labelMap)}
         REGISTERS: [
-            X: ${this.X.toString()}
+            X: ${this.X}
             T: ${this.T}
         ]
         `);
@@ -73,6 +83,7 @@ class EXA {
             }
         }
     }
+
     getValueFromParam(param) {
         if (param instanceof AST.Register) {
             // console.log("reee");
@@ -87,9 +98,17 @@ class EXA {
         return this[param];
     }
 
+    toggleMode() {
+        if (this.mode === CommMode.GLOBAL) {
+            this.mode = CommMode.LOCAL;
+        } else {
+            this.mode = CommMode.GLOBAL;
+        }
+    }
+
     processInstruction(instr) {
         let Instructions = this.Instuctions;
-        console.log(instr);
+        // console.log(instr);
         let args = instr.args;
 
 
@@ -97,11 +116,18 @@ class EXA {
         // noinspection JSUnresolvedVariable
         switch (instr.name) {
 
+            case Instructions.NOTE:
             case Instructions.MARK:
                 // need preincrement otherwise this doesn't work...
                 this.cycleCount = Math.max(0, --this.cycleCount); // do not add to cycle-count for markInstructions
                 break;
             case Instructions.NOOP:
+                break;
+            case Instructions.HALT:
+                this.halted = true;
+                break;
+            case Instructions.MODE:
+                this.toggleMode();
                 break;
             case Instructions.COPY:
                 (() => {
@@ -111,12 +137,61 @@ class EXA {
                 })();
                 break;
             case Instructions.JUMP:
-                let label = args[0];
-                let labelLineNum = this.labelMap[label];
-                console.log(`Current pc = ${this.pc}`);
-                this.pc = labelLineNum;
-                console.log(`After pc = ${this.pc}`);
+                (() => {
+                    let label = args[0];
+                    // console.log(`Current pc = ${this.pc}`);
+                    this.pc = this.labelMap[label];
+                    // console.log(`After pc = ${this.pc}`);
+                })();
                 break;
+            case Instructions.TJMP:
+                (() => {
+                    let label = args[0];
+                    let labelLineNum = this.labelMap[label];
+                    if (typeof this.T.getValue() === "string" || this.T.getValue() >= 1) {
+                        this.pc = labelLineNum;
+                    }
+                })();
+                break;
+            case Instructions.FJMP:
+                (() => {
+                    let label = args[0];
+                    let labelLineNum = this.labelMap[label];
+                    console.log(util.inspect(this.T));
+                    // TODO ensure that these conditions match the game
+                    if (typeof (this.T.getValue()) !== "string" && this.T.getValue() < 1) {
+                        this.pc = labelLineNum;
+                    }
+                })();
+                break;
+            case Instructions.TEST:
+                (() => {
+
+                    let testExpr = args[0];
+                    // TODO what to do for strings?
+                    let param1 = this.getValueFromParam(testExpr.param1);
+                    let param2 = this.getValueFromParam(testExpr.param2);
+                    let operationObj = testExpr.operation;
+                    let operationSymbol = operationObj.operation;
+                    let opmap = operationObj.opmap;
+                    let result;
+                    // console.log(`${util.inspect(operation)}`);
+                    if (operationSymbol === opmap.EQUALS) {
+                        // todo make another method that actually tests for equality?
+                        result = param1 === param2;
+                    } else if (operationSymbol === opmap.LESS_THAN) {
+                        result = param1 < param2;
+                    } else if (operationSymbol === opmap.GREATER_THAN) {
+                        result = param1 > param2;
+                    }
+                    if (result) {
+                        this.T.setValue(1);
+                    } else {
+                        this.T.setValue(0);
+                    }
+                })();
+                break;
+
             case Instructions.ADDI:
             case Instructions.SUBI:
             case Instructions.MULI:
@@ -138,6 +213,33 @@ class EXA {
                     }
                 })();
                 break;
+
+            case Instructions.SWIZ:
+                (() => {
+                    // gets number from param, turns it into string, turns that string into array, turns into int array
+                    // 9999 -> "9999" -> ["9", "9", "9", "9"] -> [9, 9, 9, 9]
+                    // the pad start ensures numbers are interpreted as 0001 instead of just 1 if less than 4 digits
+                    // the reason for reverse is because the swiz instruction operates from right to left. For example
+                    // in the number [1 3 5 7], the mask of `4` translates to the digit '1'
+                    //                4 3 2 1
+                    let number = Array.from(this.getValueFromParam(args[0]).toString().padStart(4, '0'));
+                    let mask = Array.from(this.getValueFromParam(args[1]).toString().padStart(4, '0')).map(Number);
+                    let dest = this.getRegisterFromParam(args[2]);
+                    let swizArray = [];
+                    for (let swizIndex of mask) {
+                        if (swizIndex === 0) {
+                            swizArray.push(0);
+                        } else {
+                            swizArray.push(number[swizIndex - 1]);
+                        }
+                    }
+                    let finalValue = parseInt(swizArray.join().replace(/,/g, ''));
+                    console.log(`SWIZ: ${util.inspect(number)} ${util.inspect(mask)} ${finalValue} ${dest}`);
+                    dest.setValue(finalValue);
+                    console.log(`Dest ${finalValue} is now ${dest.getValue()}`)
+                })();
+                break;
+
             default:
                 console.log("Unimplemented instruction: " + instr.name);
         }

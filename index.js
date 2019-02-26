@@ -26,10 +26,42 @@ MULI X 2 X
 JUMP LOOPA
 `;
 
-let program = parser.getProgramAST(programString);
+let program4 = `
+COPY 5 X
+MARK START
+
+TEST X = 0
+SUBI X 1 X
+FJMP START
+`;
+
+let program5 = `
+COPY 6 X
+TEST X = 5
+TJMP END
+COPY 494 X
+
+MARK END
+`;
+
+let program6 = `
+COPY 5 X
+HALT
+COPY 6 X
+`
+
+let program7 = `
+MODE
+`;
+
+let program8 = `
+SWIZ 5678 0000 X
+`;
+
+let program = parser.getProgramAST(program8);
 
 let XA = new EXA(program);
-XA.runUntilCycle(10);
+XA.run();
 
 
 console.log(XA);

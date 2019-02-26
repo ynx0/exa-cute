@@ -164,7 +164,7 @@ class Parser {
         if (match.succeeded()) {
             return this.semantics(match).tree();
         } else {
-            throw new Error("Invalid program given");
+            throw new Error("Invalid program given\nReason:" + match.message);
         }
     }
 

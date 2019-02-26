@@ -42,6 +42,7 @@ EXAScript {
 
     // there must be a better way to do this
     digit4 = digit digit? digit? digit? space?
+    // todo create a strict digit4 for swiz instruction which requires all 4 digits
 
     GeneralRegister = "X"
     TestRegister = "T"
