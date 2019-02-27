@@ -20,6 +20,7 @@ class EXA {
         this.id = 0; // TODO make id (autoincremented thing?)
         this.pc = 0; // program counter. the line number of current executing program
         this.cycleCount = 0; // todo implement and take into account pseudoinstructions (mark)
+        this.MAX_CYCLE_COUNT = 10000;
         this.program = program;
         this.halted = false;
         this.blocked = false;
@@ -246,8 +247,7 @@ class EXA {
     }
 
     runStep() {
-        // this.validateState();
-        // console.log(`pc: ${this.pc}, prl: ${this.program.body.length}`);
+        this.validateState();
         if (this.pc >= this.program.body.length) {
             this.halted = true;
             return;
@@ -283,18 +283,18 @@ class EXA {
 
     validateState() {
         let stateChecks = [
-            this.pc > 0,
+            this.pc >= 0,
+            this.cycleCount < this.MAX_CYCLE_COUNT,
 
         ];
-        stateChecks.forEach(check => {
-            if (!check) {
+        for (let i in stateChecks) {
+            if (!stateChecks[i]) {
                 throw new Error(`
                 FATAL: Invalid state encountered.
-                ============CORE DUMP============
-                ${this.toString()}
+                FAILED TO MEET REQUIREMENT#${i}
                 `)
             }
-        });
+        }
     }
 }
 
